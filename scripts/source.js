@@ -85,9 +85,10 @@ function handleAdd(name){
 }
 
 function handleRemove(name){
-    TOKENS.find(token => token.name === name).decrement()
     if(TOKENS.find(token => token.name === name).totalCount == 0){
         TOKENS.splice( TOKENS.indexOf(TOKENS.find(token => token.name === name)),1)
+    }else{
+        TOKENS.find(token => token.name === name).decrement()
     }
     updateView();
 }
