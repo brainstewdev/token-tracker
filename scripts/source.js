@@ -1,11 +1,22 @@
-const BASE_API_URL = "https://api.magicthegathering.io/v1/cards?Layout=token"; 
+const BASE_API_URL = "https://api.scryfall.com/cards/named?layout=token&fuzzy="; 
 var TOKENS = []; 
 
 class Token{
+    
     constructor(name){
+        this.foundCard = false
         this.totalCount = 1
         this.tappped = 0
         this.name = name
+    }
+    setTrueCard(name, description, imageURL){
+        this.foundCard = true
+        this.totalCount = 1
+        this.tappped = 0
+        this.name = name
+        this.description =description
+        this.imageURL = imageURL
+        return this
     }
     tap(){
         if(this.totalCount-this.tappped > 0){
@@ -32,11 +43,34 @@ class Token{
         return this.totalCount
     }
 }
+// from https://stackoverflow.com/questions/247483/http-get-request-in-javascript
+function httpGetAsync(url, callback)
+{
+    var xmlHttp = new XMLHttpRequest();
+    xmlHttp.onreadystatechange = function() { 
+        if (xmlHttp.readyState == 4)
+            callback(xmlHttp.responseText);
+    }
+    xmlHttp.open("GET", url, true);
+    xmlHttp.send(null);
+}
 
 function addCard(){
     let name = document.getElementById("token_name_input").value
-    TOKENS.push(new Token(name))
-    updateView()
+    // get the card from the api (if it exists)
+    httpGetAsync(BASE_API_URL+name, response => {
+        const obj = JSON.parse(response);
+        var token = new Token(name)
+        if(obj["object"] === "card"){
+            // card has been found, create the token based on the retrieved info
+            TOKENS.push(token.setTrueCard(obj["name"], obj["oracle_text"], obj["image_uris"]["art_crop"]))
+        }else{
+            // card hasn't been found, create the token based on the name only.
+            TOKENS.push(token)
+        }
+        // update the view
+        updateView()
+    });
 }
 
 function updateView(){
@@ -46,12 +80,38 @@ function updateView(){
 function drawCard(){
     innerHTMLresult = ""
     TOKENS.forEach(element => {
-        innerHTMLresult += HTMLCardRepresentation(element)
+        if(!element.foundCard){
+            innerHTMLresult += HTMLCardRepresentation(element)
+        }else{
+            innerHTMLresult += HTMLCardRepresentationFromApi(element)
+        }
     });
     document.getElementById("cardHolder").innerHTML = innerHTMLresult
 }
+function HTMLCardRepresentationFromApi(token){
+    return `<div class="card" style="width: 18rem;"><div class="card-body">
+    
+    <div class="card-header">
+    ${token.name}
+    </div>
+    <img src=${token.imageURL}  class="img-fluid"></img>
+    <p class="card-text">${token.description}</p>
+    <p class="card-text">tappati: ${token.tappped} / ${token.totalCount}</p>
+    <button type="button" onclick="handleAdd('${token.name}')" class="btn btn-primary">+</button>
+    /
+    <button type="button" onclick="handleRemove('${token.name}')" class="btn btn-primary">-</button>
+    
+    <button type="button" onclick="handleTap('${token.name}')" class="btn btn-primary">tap</button>
+    /
+    <button type="button" onclick="handleUntap('${token.name}')" class="btn btn-primary">untap</button>
+  </div>  
+  </div><br>`
+}
 function HTMLCardRepresentation(token){
-    return `<div class="card" style="width: 18rem;"><div class="card-body"><h5 class="card-title">${token.name}</h5>
+    return `<div class="card" style="width: 18rem;"><div class="card-body">    
+    <div class="card-header">
+    ${token.name}
+    </div>
       <p class="card-text">tappati: ${token.tappped} / ${token.totalCount}</p>
       <button type="button" onclick="handleAdd('${token.name}')" class="btn btn-primary">+</button>
       /
