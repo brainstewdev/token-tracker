@@ -18,6 +18,17 @@ class Token{
         this.imageURL = imageURL
         return this
     }
+    setCreatureCard(name, description, imageURL, power, toughness){
+        this.foundCard = true
+        this.totalCount = 1
+        this.tappped = 0
+        this.power = power
+        this.toughness = toughness
+        this.name = name
+        this.description =description
+        this.imageURL = imageURL
+        return this
+    }
     tap(){
         if(this.totalCount-this.tappped > 0){
             this.tappped++
@@ -63,7 +74,12 @@ function addCard(){
         var token = new Token(name)
         if(obj["object"] === "card"){
             // card has been found, create the token based on the retrieved info
-            TOKENS.push(token.setTrueCard(obj["name"], obj["oracle_text"], obj["image_uris"]["art_crop"]))
+            // if it's a creature create it accordingly
+            if(typeof(obj["toughness"]) == "undefined"){
+                TOKENS.push(token.setTrueCard(obj["name"], obj["oracle_text"], obj["image_uris"]["art_crop"]))
+            }else{
+                TOKENS.push(token.setCreatureCard(obj["name"], obj["oracle_text"], obj["image_uris"]["art_crop"], obj["power"],obj["toughness"]))
+            }
         }else{
             // card hasn't been found, create the token based on the name only.
             TOKENS.push(token)
@@ -74,12 +90,14 @@ function addCard(){
 }
 
 function updateView(){
+    console.log(TOKENS)
     drawCard()
 }
 
 function drawCard(){
     innerHTMLresult = ""
     TOKENS.forEach(element => {
+        
         if(!element.foundCard){
             innerHTMLresult += HTMLCardRepresentation(element)
         }else{
@@ -89,14 +107,18 @@ function drawCard(){
     document.getElementById("cardHolder").innerHTML = innerHTMLresult
 }
 function HTMLCardRepresentationFromApi(token){
-    return `<div class="card" style="width: 18rem;"><div class="card-body">
+    let text =`<div class="card" style="width: 18rem;"><div class="card-body">
     
     <div class="card-header">
     ${token.name}
     </div>
     <img src=${token.imageURL}  class="img-fluid"></img>
-    <p class="card-text">${token.description}</p>
-    <p class="card-text">tappati: ${token.tappped} / ${token.totalCount}</p>
+    <p class="card-text">${token.description}</p>`
+    if(typeof(token.power) != "undefined"){
+        text += `<h5 class="text-end">${token.power}/${token.toughness}</h5> `
+    }
+    text +=
+    `<p class="card-text">tappati: ${token.tappped} / ${token.totalCount}</p>
     <button type="button" onclick="handleAdd('${token.name}')" class="btn btn-primary">+</button>
     /
     <button type="button" onclick="handleRemove('${token.name}')" class="btn btn-primary">-</button>
@@ -106,6 +128,7 @@ function HTMLCardRepresentationFromApi(token){
     <button type="button" onclick="handleUntap('${token.name}')" class="btn btn-primary">untap</button>
   </div>  
   </div><br>`
+  return text;
 }
 function HTMLCardRepresentation(token){
     return `<div class="card" style="width: 18rem;"><div class="card-body">    
